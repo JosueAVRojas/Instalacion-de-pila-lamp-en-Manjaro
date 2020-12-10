@@ -1,0 +1,189 @@
+///// Creado por JosueVRojas /////
+
+En este pequeño tutorial te enseñare a instalar y configurar Apache, MySQL, PHP (LAMP) 2020.
+LAMP es el acrónimo de Linux, Apache, MySQL / MariaDB, PHP / Perl / Pyhton.
+
+Actualización del sistema:
+Actualice su sistema:
+sudo pacman -Syyu
+
+Pasos para la instalación y configuración  de Apache:
+Instalar Apache:
+sudo pacman -S apache
+
+Editar el archivo httpd.conf
+sudo nano /etc/httpd/conf/httpd.conf
+
+Busque y comente la siguiente línea si aún no lo esta:
+[...]
+# LoadModule unique_id_module modules/mod_unique_id.so
+[...]
+
+Guarde y cierre el archivo.
+
+Habilite el servicio Apache para que se inicie en el arranque y reinicie el servicio Apache usando los comandos:
+sudo systemctl enable httpd
+sudo systemctl restart httpd
+
+Puede verificar si Apache se está ejecutando o no con el comando:
+sudo systemctl status httpd
+
+Para probar Apache crearemos el siguiente archivo:
+sudo nano /srv/http/index.html
+
+Agregamos las siguientes líneas dentro del archivo que hemos creado:
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Welcome</title>
+ </head>
+<body>
+  <h2>Welcome to my Web Server test page</h2>
+</body>
+</html>
+
+Abrimos el navegador y colocamos:
+localhost
+
+
+Pasos para instalar y configurar MariaDB:
+Ejecutamos el siguiente comando para instalar:
+sudo pacman -S mysql
+
+Nota: Como sabrá, MariaDB es ahora oficialmente la implementación predeterminada de MySQL en Arch Linux desde 2013. Por lo tanto, se le preguntará si desea instalar el servidor MariaDB o Percona, solo presione enter y luego escriba y presione enter nuevamente. La selección predeterminada, es decir, MariaDB, se instalará en su Arch Linux.
+
+Debemos inicializar el directorio de datos de MariaDB:
+sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+
+Luego debemos habilitar e iniciar el servicio de MariaDB:
+sudo systemctl enable mysqld
+sudo systemctl start mysqld
+
+Si queremos podemos verificar si MariaDB se está ejecutando o no:
+	sudo systemctl status mysqld
+	
+Ahora configuraremos la contraseña del usuario raíz de MySQL / MariaDB
+sudo mysql_secure_installation
+
+Nota: Aquí solo daremos enter e ingresamos nuestra contraseña de root, en mi caso yo use “toor”, es importante no olvidar que cuando se ingresa la contraseña no se ve.
+
+
+Instalacion y configuracion de PHP:
+
+Para instalar PHP, ejecutamos el siguiente comando:
+sudo pacman -S php php-apache
+
+Ahora configuraremos el módulo de PHP de apache, esto lo haremos editando el siguiente archivo:
+sudo nano /etc/httpd/conf/httpd.conf
+
+Buscamos la siguiente línea y la comentamos:
+[...]
+#LoadModule mpm_event_module modules/mod_mpm_event.so
+[...]
+
+Descomentamos o agregamos la siguiente línea:
+LoadModule mpm_prefork_module modules/mod_mpm_prefork.so
+
+Agregamos las siguientes líneas en la parte inferior:
+LoadModule php7_module modules/libphp7.so
+AddHandler php7-script php
+Include conf/extra/php7_module.conf
+
+Guarde y cierre el archivo.
+
+Ahora crearemos un archivo en el directorio raíz de apache:
+sudo nano /srv/http/test.php
+
+Agregamos las siguientes líneas:
+<?php
+phpinfo(); ?>
+
+Reiniciamos el servicio httpd:
+	sudo systemctl restart httpd
+
+Abrimos nuestro navegador y escribimos:
+	localhost/test.php
+
+
+
+Instalación y configuración de phpMyAdmin
+
+phpMyAdmin es una herramienta gráfica de administración de MySQL / MariaDB que se puede utilizar para crear, editar y eliminar bases de datos.
+
+Para instalar phpMyAdmin ejecutaremos:
+	sudo pacman -S phpmyadmin
+
+Ahora editaremos el siguiente archivo:
+sudo nano /etc/php/php.ini
+
+Nos aseguramos que las siguientes líneas no están comentadas, si lo están las descomentamos:
+[...]
+extension=bz2
+extension=mysqli
+[...]
+
+Ahora guardamos el archivo y lo cerramos.
+
+Ahora crearemos un archivo de configuración para phpMyAdmin:
+sudo nano /etc/httpd/conf/extra/phpmyadmin.conf
+
+Agregamos las siguientes líneas:
+Alias /phpmyadmin "/usr/share/webapps/phpMyAdmin"
+<Directory "/usr/share/webapps/phpMyAdmin">
+DirectoryIndex index.php
+AllowOverride All
+Options FollowSymlinks
+Require all granted
+</Directory>
+
+Luego abrimos el archivo de configuración de apache:
+sudo nano /etc/httpd/conf/httpd.conf
+
+Agregamos la siguiente línea al archivo:
+Include conf/extra/phpmyadmin.conf
+
+Guardamos y cerramos el archivo.
+
+Reiniciamos el servicio de httpd:
+sudo systemctl restart httpd
+
+Probamos que esté funcionando phpMyAdmin:
+localhost/phpmyadmin
+
+Solucionando los errores de phpMyAdmin:
+Es posible que vea un error que dice "El archivo de configuración ahora necesita una frase de contraseña secreta (blowfish_secret)" en la parte inferior del panel de phpMyAdmin.
+
+Para eliminar este error editaremos el siguiente archivo:
+sudo nano /etc/webapps/phpmyadmin/config.inc.php
+
+Busque la siguiente línea y especifique la contraseña secreta de bluefish:
+	$cfg['blowfish_secret'] = 'toor'; /* YOU MUST FILL IN THIS FOR COOKIE AUTH!$ /**
+
+Guardamos y cerramos el archivo.
+
+Reiniciamos el servicio de apache:
+sudo systemctl restart httpd
+
+Es posible que vea un error que dice "phpMyAdmin es incapaz de almacenar plantillas y será algo lento debido a esto" en la parte inferior del panel de phpMyAdmin. Para solucionar este error haremos lo siguiente:
+
+Abriremos el siguiente archivo:
+sudo nano /usr/share/webapps/phpmyadmin/config.inc.php
+
+Agregamos la siguiente línea:
+$cfg['TempDir'] = 'tmp';
+
+Guardamos y cerramos el archivo.
+
+Ahora nos dirigimos a la carpeta de phpMyAdmin:
+cd  /usr/share/webapps/phpmyadmin/
+
+Crearemos la carpeta que falta:
+sudo mkdir tmp
+
+Ahora le daremos los permisos correspondientes:
+	sudo chmod -R 0777 tmp/
+
+Volvemos a phpMyAdmin y el error ya se habria solucionado
